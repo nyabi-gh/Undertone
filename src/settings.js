@@ -137,7 +137,7 @@ export class Settings {
             const panel = BdApi.UI.buildSettingsPanel(settings._panelSpec());
             return React.createElement(
                 "div",
-                { ref: root },
+                { ref: root, className: SETTINGS_CLASS },
                 React.cloneElement(panel, { key: `panel-${revision}` }),
             );
         }
@@ -389,6 +389,8 @@ export class Settings {
         };
     }
 }
+
+export const SETTINGS_CLASS = "undertone-settings";
 
 const CUSTOM_MODEL_FIELD = "customModel";
 

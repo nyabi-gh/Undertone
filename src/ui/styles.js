@@ -1,4 +1,9 @@
 export const STYLES = `
+/* BetterDiscord pins its dropdown list to the opening button with anchor() but never sets
+   position-anchor, which Chrome 152 defaults to normal; the list then falls to the corner. */
+.undertone-settings .bd-select-options {
+    position-anchor: auto;
+}
 .undertone-translation__anchor {
     display: block;
     height: 0;

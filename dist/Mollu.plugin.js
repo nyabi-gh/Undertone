@@ -1309,7 +1309,7 @@ var Settings = class {
       const panel = BdApi.UI.buildSettingsPanel(settings._panelSpec());
       return React.createElement(
         "div",
-        { ref: root },
+        { ref: root, className: SETTINGS_CLASS },
         React.cloneElement(panel, { key: `panel-${revision}` })
       );
     }
@@ -1554,6 +1554,7 @@ var Settings = class {
     };
   }
 };
+var SETTINGS_CLASS = "undertone-settings";
 var CUSTOM_MODEL_FIELD = "customModel";
 function modelFields(v, custom) {
   const models6 = knownModels(v.provider);
@@ -3544,6 +3545,11 @@ var BlockControls = class {
 
 // src/ui/styles.js
 var STYLES = `
+/* BetterDiscord pins its dropdown list to the opening button with anchor() but never sets
+   position-anchor, which Chrome 152 defaults to normal; the list then falls to the corner. */
+.undertone-settings .bd-select-options {
+    position-anchor: auto;
+}
 .undertone-translation__anchor {
     display: block;
     height: 0;

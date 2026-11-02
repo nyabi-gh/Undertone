@@ -654,7 +654,8 @@ await checkAsync("scroll: a block never lands on screen while the reader is scro
     }
 });
 
-const { Settings } = await import("../src/settings.js");
+const { Settings, SETTINGS_CLASS } = await import("../src/settings.js");
+const { STYLES } = await import("../src/ui/styles.js");
 const { CUSTOM_MODEL } = await import("../src/translation/providers/index.js");
 
 check("rich text: discord tokens render as elements, not raw markup", () => {
@@ -1523,6 +1524,15 @@ check("settings: the modal joins Discord's focus locks, or the one under it take
         BdApi.Webpack.getModule = getModule;
         BdApi.React.useRef = useRef;
     }
+});
+
+check("settings: the panel's dropdown lists open under their button, not in the corner", () => {
+    const root = new Settings().buildPanel().type();
+    assert.equal(root.props.className, SETTINGS_CLASS);
+    assert.match(
+        STYLES,
+        new RegExp(`\\.${SETTINGS_CLASS} \\.bd-select-options \\{\\s*position-anchor: auto;`),
+    );
 });
 
 check("settings: the panel is a live component, not a one-shot spec", () => {
