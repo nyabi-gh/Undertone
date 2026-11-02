@@ -1,7 +1,7 @@
 /**
  * @name Undertone
  * @author Nyabi
- * @version 1.5.1
+ * @version 1.5.2
  * @description Auto-translates messages in chosen Discord servers into the language you pick, shown under the original.
  * @source https://github.com/nyabi-gh/Undertone
  */
