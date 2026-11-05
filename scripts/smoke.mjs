@@ -266,6 +266,8 @@ const {
     LEGACY_NAMES,
     TRANSIENT_RETRIES,
     MAX_OUTPUT_TOKENS,
+    FAILURE_BACKOFF_MS,
+    MAX_FAILURE_RETRIES,
 } = await import("../src/constants.js");
 
 check("cache: save() keeps the newest entries, not the oldest", () => {
@@ -394,12 +396,17 @@ await checkAsync("translator: a failed translation is not retried immediately", 
     };
     try {
         const translator = new Translator({ settings: stubSettings() });
-        assert.equal((await translator.translate("hello there")).status, "error");
+        const before = Date.now();
+        const failed = await translator.translate("hello there");
+        assert.equal(failed.status, "error");
         assert.equal(calls, 1 + TRANSIENT_RETRIES, "a 5xx is retried before the user sees it");
+        assert.ok(failed.retryAt >= before + FAILURE_BACKOFF_MS, "it says when asking again is worth it");
 
         const afterFirst = calls;
-        assert.equal((await translator.translate("hello there")).status, "error");
+        const waiting = await translator.translate("hello there");
+        assert.equal(waiting.status, "error");
         assert.equal(calls, afterFirst, "the second attempt is served from the failure backoff");
+        assert.equal(waiting.retryAt, failed.retryAt, "and points at the same moment");
 
         assert.equal((await translator.translate("hello there", { ignoreBackoff: true })).status, "error");
         assert.ok(calls > afterFirst, "an explicit retry bypasses the backoff");
@@ -1880,6 +1887,7 @@ await checkAsync("translator: a refused key stops every request and says so once
         const first = await translator.translate("hello there");
         assert.equal(first.status, "error");
         assert.equal(first.message, t("error.badKey"));
+        assert.ok(!("retryAt" in first), "asking again with a refused key cannot help");
         assert.equal((await translator.translate("another message entirely")).status, "error");
         assert.equal(calls, 1, "nothing more is sent with a key that was refused");
         assert.deepEqual(reported, [[t("error.badKey"), true]]);
@@ -2493,6 +2501,58 @@ check("translation block: hidden leaves nothing in automatic mode and the button
     );
 });
 
+await checkAsync("translation block: a failure on screen is asked again by itself, a few times", async () => {
+    const random = Math.random;
+    Math.random = () => 0;
+    try {
+        await failuresRetried();
+    } finally {
+        Math.random = random;
+    }
+});
+
+async function failuresRetried() {
+    const failing = (retryAt) => ({ status: "error", message: "HTTP 500", ...(retryAt && { retryAt }) });
+
+    let calls = 0;
+    const flaky = await mountBlock(async () => {
+        calls += 1;
+        return failing(Date.now() + 10);
+    });
+    await new Promise((resolve) => setTimeout(resolve, 200));
+    assert.equal(calls, 1 + MAX_FAILURE_RETRIES, "it stops after a few tries");
+    assert.equal(flaky.result().status, "error", "and the failure stays on screen to click");
+    flaky.unmount();
+
+    let fatalCalls = 0;
+    const fatal = await mountBlock(async () => {
+        fatalCalls += 1;
+        return failing();
+    });
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    assert.equal(fatalCalls, 1, "a failure asking again cannot fix is left alone");
+    fatal.unmount();
+
+    let healed = 0;
+    const recovering = await mountBlock(async () => {
+        healed += 1;
+        return healed === 1 ? failing(Date.now() + 10) : { status: "done", text: "안녕", segments: [] };
+    });
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    assert.equal(healed, 2);
+    assert.equal(recovering.result().status, "done", "the retry's translation replaces the failure");
+    recovering.unmount();
+
+    let goneCalls = 0;
+    const gone = await mountBlock(async () => {
+        goneCalls += 1;
+        return failing(Date.now() + 30);
+    });
+    gone.unmount();
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    assert.equal(goneCalls, 1, "a message that went away is not asked about again");
+}
+
 check("settings: the everyday sections are open, and the fine-tuning ones start folded", () => {
     const sections = new Settings()._panelSpec().settings;
     assert.ok(sections.every((entry) => entry.type === "category"));
@@ -2790,6 +2850,53 @@ function stubSettings() {
             maxConcurrent: 2,
         },
     };
+}
+
+// Runs a block's effects for real, with no IntersectionObserver, so it counts as on screen.
+async function mountBlock(translate) {
+    const react = BdApi.React;
+    const hooks = { useState: react.useState, useEffect: react.useEffect };
+    const slots = [];
+    const effects = [];
+    react.useState = (init) => {
+        const slot = { value: typeof init === "function" ? init() : init };
+        slots.push(slot);
+        return [
+            slot.value,
+            (next) => {
+                slot.value = typeof next === "function" ? next(slot.value) : next;
+            },
+        ];
+    };
+    react.useEffect = (effect) => effects.push(effect);
+
+    const translator = { peek: () => ({ status: "unknown" }), translate };
+    const settings = stubSettings();
+    Object.assign(settings.current, { autoTranslate: true, showPending: true });
+    settings.onChange = () => () => {};
+    const cleanups = [];
+    try {
+        TranslationBlock({
+            text: "hello there",
+            messageId: "m1",
+            translator,
+            blocks: new BlockControls({ translator }),
+            settings,
+            stores: {},
+            guildId: null,
+        });
+        for (const effect of effects) {
+            const cleanup = effect();
+            if (typeof cleanup === "function") cleanups.push(cleanup);
+        }
+    } finally {
+        Object.assign(react, hooks);
+    }
+    const result = slots.find(
+        (slot) => slot.value && typeof slot.value === "object" && "status" in slot.value,
+    );
+    await flush();
+    return { result: () => result.value, unmount: () => cleanups.forEach((cleanup) => cleanup()) };
 }
 
 function claudeAnswer(translation) {

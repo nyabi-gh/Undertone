@@ -80,6 +80,7 @@ var TRANSIENT_RETRIES = 2;
 var TRANSIENT_RETRY_DELAY_MS = 1500;
 var FAILURE_BACKOFF_MS = 6e4;
 var FAILURE_RECORD_LIMIT = 500;
+var MAX_FAILURE_RETRIES = 3;
 var MAX_OUTPUT_TOKENS = 4096;
 var OUTPUT_TOKEN_HEADROOM = 256;
 var MAX_BODY_RETUNES = 3;
@@ -1915,7 +1916,7 @@ var TaskQueue = class {
 // src/translation/translator.js
 var skip = () => ({ status: "skip" });
 var done = (text, segments) => ({ status: "done", text, segments });
-var error = (message) => ({ status: "error", message });
+var error = (message, retryAt) => retryAt == null ? { status: "error", message } : { status: "error", message, retryAt };
 var ALWAYS = () => true;
 var UNBLOCKING = /* @__PURE__ */ new Set(["provider", "apiKey", "model", "baseUrl", "targetLanguage", "outgoingLanguage"]);
 var PROBE_TEXT = {
@@ -2015,7 +2016,8 @@ var Translator = class {
       this._failures.delete(key);
     } else {
       if (this._blocked) return Promise.resolve(error(this._blocked));
-      if (this._isBackingOff(key)) return Promise.resolve(error(t("error.retryLater")));
+      const backoffEnds = this._backoffEnd(key);
+      if (backoffEnds) return Promise.resolve(error(t("error.retryLater"), backoffEnds));
     }
     if (hooks.onStart) this._onStart(key, hooks.onStart);
     const shouldRun = hooks.shouldRun ?? ALWAYS;
@@ -2128,12 +2130,12 @@ var Translator = class {
       logger.info(`the backend allows ${limit} requests a minute; pacing them`);
     this._spacing = spacing;
   }
-  _isBackingOff(maskedKey) {
+  _backoffEnd(maskedKey) {
     const failedAt = this._failures.get(maskedKey);
-    if (failedAt == null) return false;
-    if (Date.now() - failedAt < FAILURE_BACKOFF_MS) return true;
+    if (failedAt == null) return 0;
+    if (Date.now() - failedAt < FAILURE_BACKOFF_MS) return failedAt + FAILURE_BACKOFF_MS;
     this._failures.delete(maskedKey);
-    return false;
+    return 0;
   }
   async _callProvider(maskedText, language, timeout = 0) {
     const controller = new AbortController();
@@ -2200,18 +2202,21 @@ var Translator = class {
       }
       return error(reason);
     }
-    this._rememberFailure(maskedKey);
+    const failedAt = this._rememberFailure(maskedKey);
     logger.warn("translate failed:", message);
     this._onError(message, { fatal: false });
-    return error(message);
+    return error(message, failedAt + FAILURE_BACKOFF_MS);
   }
   _rememberFailure(maskedKey) {
-    this._failures.set(maskedKey, Date.now());
-    if (this._failures.size <= FAILURE_RECORD_LIMIT) return;
-    const cutoff = Date.now() - FAILURE_BACKOFF_MS;
-    for (const [key, at] of this._failures) {
-      if (at < cutoff) this._failures.delete(key);
+    const failedAt = Date.now();
+    this._failures.set(maskedKey, failedAt);
+    if (this._failures.size > FAILURE_RECORD_LIMIT) {
+      const cutoff = failedAt - FAILURE_BACKOFF_MS;
+      for (const [key, at] of this._failures) {
+        if (at < cutoff) this._failures.delete(key);
+      }
     }
+    return failedAt;
   }
 };
 function sleep(ms) {
@@ -2779,6 +2784,7 @@ function TranslationBlock({ text, messageId, translator, blocks, settings, store
     let dwell = null;
     let running = false;
     let rateLimitRetries = 0;
+    let failureRetries = 0;
     let release = null;
     const present = (next) => {
       release?.();
@@ -2794,16 +2800,31 @@ function TranslationBlock({ text, messageId, translator, blocks, settings, store
       return void 0;
     }
     setResult({ status: forced ? "pending" : "idle" });
-    const schedule = (delay) => {
+    const schedule = (delay, onFire) => {
       dwell = setTimeout(() => {
         dwell = null;
+        onFire?.();
         run();
       }, delay);
+    };
+    const cancelScheduled = () => {
+      if (dwell != null) clearTimeout(dwell);
+      dwell = null;
+    };
+    const retryAfterFailure = (retryAt) => {
+      if (!visible || dwell != null || failureRetries >= MAX_FAILURE_RETRIES) return;
+      schedule(Math.max(0, retryAt - Date.now()) + jitter(), () => {
+        failureRetries += 1;
+      });
     };
     const run = (force) => {
       if (!alive || running) return;
       running = true;
-      if (force) rateLimitRetries = 0;
+      if (force) {
+        rateLimitRetries = 0;
+        failureRetries = 0;
+        cancelScheduled();
+      }
       translator.translate(text, {
         ignoreBackoff: force === true,
         onStart: () => {
@@ -2823,17 +2844,20 @@ function TranslationBlock({ text, messageId, translator, blocks, settings, store
           }
           return;
         }
+        if (res.status === "error" && res.retryAt != null) retryAfterFailure(res.retryAt);
         present(res.status === "unknown" ? { status: "idle" } : res);
       });
     };
     triggerRef.current = run;
+    const dispose = () => {
+      alive = false;
+      release?.();
+      cancelScheduled();
+    };
     if (!autoTranslate) {
       visible = true;
       if (forced) run(true);
-      return () => {
-        alive = false;
-        release?.();
-      };
+      return dispose;
     }
     if (forced) {
       visible = true;
@@ -2843,24 +2867,18 @@ function TranslationBlock({ text, messageId, translator, blocks, settings, store
       visible = isVisible;
       if (isVisible) {
         if (dwell == null && !running) schedule(DWELL_MS);
-      } else if (dwell != null) {
-        clearTimeout(dwell);
-        dwell = null;
+      } else {
+        cancelScheduled();
       }
     });
     if (!stopObserving) {
       visible = true;
       run();
-      return () => {
-        alive = false;
-        release?.();
-      };
+      return dispose;
     }
     return () => {
-      alive = false;
-      release?.();
+      dispose();
       stopObserving();
-      if (dwell != null) clearTimeout(dwell);
     };
   }, [text, autoTranslate, targetLanguage, maxChars, provider, model, round]);
   const status = result && result.status;

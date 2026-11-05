@@ -59,6 +59,7 @@ export const TRANSIENT_RETRY_DELAY_MS = 1500;
 
 export const FAILURE_BACKOFF_MS = 60000;
 export const FAILURE_RECORD_LIMIT = 500;
+export const MAX_FAILURE_RETRIES = 3;
 
 export const MAX_OUTPUT_TOKENS = 4096;
 export const OUTPUT_TOKEN_HEADROOM = 256;

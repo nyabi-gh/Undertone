@@ -17,7 +17,9 @@ import { logger } from "../lib/logger.js";
 
 const skip = () => ({ status: "skip" });
 const done = (text, segments) => ({ status: "done", text, segments });
-const error = (message) => ({ status: "error", message });
+// retryAt marks a failure that asking again may get past, and when that becomes worth trying.
+const error = (message, retryAt) =>
+    retryAt == null ? { status: "error", message } : { status: "error", message, retryAt };
 const ALWAYS = () => true;
 
 // Changing any of these can turn a request that was refused into one that works.
@@ -136,7 +138,8 @@ export class Translator {
             this._failures.delete(key);
         } else {
             if (this._blocked) return Promise.resolve(error(this._blocked));
-            if (this._isBackingOff(key)) return Promise.resolve(error(t("error.retryLater")));
+            const backoffEnds = this._backoffEnd(key);
+            if (backoffEnds) return Promise.resolve(error(t("error.retryLater"), backoffEnds));
         }
 
         if (hooks.onStart) this._onStart(key, hooks.onStart);
@@ -269,12 +272,12 @@ export class Translator {
         this._spacing = spacing;
     }
 
-    _isBackingOff(maskedKey) {
+    _backoffEnd(maskedKey) {
         const failedAt = this._failures.get(maskedKey);
-        if (failedAt == null) return false;
-        if (Date.now() - failedAt < FAILURE_BACKOFF_MS) return true;
+        if (failedAt == null) return 0;
+        if (Date.now() - failedAt < FAILURE_BACKOFF_MS) return failedAt + FAILURE_BACKOFF_MS;
         this._failures.delete(maskedKey);
-        return false;
+        return 0;
     }
 
     async _callProvider(maskedText, language, timeout = 0) {
@@ -360,19 +363,22 @@ export class Translator {
             return error(reason);
         }
 
-        this._rememberFailure(maskedKey);
+        const failedAt = this._rememberFailure(maskedKey);
         logger.warn("translate failed:", message);
         this._onError(message, { fatal: false });
-        return error(message);
+        return error(message, failedAt + FAILURE_BACKOFF_MS);
     }
 
     _rememberFailure(maskedKey) {
-        this._failures.set(maskedKey, Date.now());
-        if (this._failures.size <= FAILURE_RECORD_LIMIT) return;
-        const cutoff = Date.now() - FAILURE_BACKOFF_MS;
-        for (const [key, at] of this._failures) {
-            if (at < cutoff) this._failures.delete(key);
+        const failedAt = Date.now();
+        this._failures.set(maskedKey, failedAt);
+        if (this._failures.size > FAILURE_RECORD_LIMIT) {
+            const cutoff = failedAt - FAILURE_BACKOFF_MS;
+            for (const [key, at] of this._failures) {
+                if (at < cutoff) this._failures.delete(key);
+            }
         }
+        return failedAt;
     }
 }
 

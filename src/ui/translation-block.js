@@ -2,7 +2,7 @@ import { React } from "../discord.js";
 import { renderSegments } from "./rich-text.js";
 import { observeVisibility } from "./visibility.js";
 import { blockHeight, keepPlace, whenSteady } from "./scroll.js";
-import { MAX_RATE_LIMIT_RETRIES } from "../constants.js";
+import { MAX_RATE_LIMIT_RETRIES, MAX_FAILURE_RETRIES } from "../constants.js";
 import { badgeFor } from "../languages.js";
 import { t } from "../i18n.js";
 
@@ -60,6 +60,7 @@ export function TranslationBlock({ text, messageId, translator, blocks, settings
         let dwell = null;
         let running = false;
         let rateLimitRetries = 0;
+        let failureRetries = 0;
         let release = null;
 
         const present = (next) => {
@@ -79,17 +80,36 @@ export function TranslationBlock({ text, messageId, translator, blocks, settings
         }
         setResult({ status: forced ? "pending" : "idle" });
 
-        const schedule = (delay) => {
+        const schedule = (delay, onFire) => {
             dwell = setTimeout(() => {
                 dwell = null;
+                onFire?.();
                 run();
             }, delay);
+        };
+
+        const cancelScheduled = () => {
+            if (dwell != null) clearTimeout(dwell);
+            dwell = null;
+        };
+
+        // Off screen a retry is not worth a request, and a backend that keeps failing is left
+        // alone after a few tries until the reader clicks.
+        const retryAfterFailure = (retryAt) => {
+            if (!visible || dwell != null || failureRetries >= MAX_FAILURE_RETRIES) return;
+            schedule(Math.max(0, retryAt - Date.now()) + jitter(), () => {
+                failureRetries += 1;
+            });
         };
 
         const run = (force) => {
             if (!alive || running) return;
             running = true;
-            if (force) rateLimitRetries = 0;
+            if (force) {
+                rateLimitRetries = 0;
+                failureRetries = 0;
+                cancelScheduled();
+            }
             translator
                 .translate(text, {
                     ignoreBackoff: force === true,
@@ -114,19 +134,23 @@ export function TranslationBlock({ text, messageId, translator, blocks, settings
                         return;
                     }
 
+                    if (res.status === "error" && res.retryAt != null) retryAfterFailure(res.retryAt);
                     present(res.status === "unknown" ? { status: "idle" } : res);
                 });
         };
 
         triggerRef.current = run;
 
+        const dispose = () => {
+            alive = false;
+            release?.();
+            cancelScheduled();
+        };
+
         if (!autoTranslate) {
             visible = true;
             if (forced) run(true);
-            return () => {
-                alive = false;
-                release?.();
-            };
+            return dispose;
         }
 
         if (forced) {
@@ -138,26 +162,20 @@ export function TranslationBlock({ text, messageId, translator, blocks, settings
             visible = isVisible;
             if (isVisible) {
                 if (dwell == null && !running) schedule(DWELL_MS);
-            } else if (dwell != null) {
-                clearTimeout(dwell);
-                dwell = null;
+            } else {
+                cancelScheduled();
             }
         });
 
         if (!stopObserving) {
             visible = true;
             run();
-            return () => {
-                alive = false;
-                release?.();
-            };
+            return dispose;
         }
 
         return () => {
-            alive = false;
-            release?.();
+            dispose();
             stopObserving();
-            if (dwell != null) clearTimeout(dwell);
         };
     }, [text, autoTranslate, targetLanguage, maxChars, provider, model, round]);
 
