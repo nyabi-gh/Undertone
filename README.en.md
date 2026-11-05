@@ -59,6 +59,7 @@ Change them under `Fine-tuning` in settings.
 
 - If the target language is the language the server already speaks, there is nothing to translate.
 - Your own messages are skipped by default. Turn on `Translate my own messages` under `Fine-tuning` to test with your own typing.
+- When `Translation failed` shows up for anything other than the API key or the balance, it is tried again by itself a minute later while the message is on screen, up to three times. Click it to try again right away.
 - For a translation that came out wrong, right-click the message → **Translate again with Mollu**.
 - Right after a large Discord update, translations may stop appearing. Wait for a plugin update.
 
