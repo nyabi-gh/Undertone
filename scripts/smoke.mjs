@@ -1476,17 +1476,17 @@ const { downloadUrlFor, readVersion, isNewer, Updater, verifySignature } = await
 
 check("updater: the download url is the latest release asset, from meta.source and nowhere else", () => {
     assert.equal(
-        downloadUrlFor("https://github.com/nyabi-gh/undertone"),
-        "https://github.com/nyabi-gh/undertone/releases/latest/download/Mollu.plugin.js",
+        downloadUrlFor("https://github.com/nyabi-gh/mollu"),
+        "https://github.com/nyabi-gh/mollu/releases/latest/download/Mollu.plugin.js",
     );
     assert.equal(
-        downloadUrlFor("https://github.com/nyabi-gh/undertone.git"),
-        downloadUrlFor("https://github.com/nyabi-gh/undertone"),
+        downloadUrlFor("https://github.com/nyabi-gh/mollu.git"),
+        downloadUrlFor("https://github.com/nyabi-gh/mollu"),
     );
 
-    assert.equal(downloadUrlFor("http://github.com/nyabi-gh/undertone"), null);
-    assert.equal(downloadUrlFor("https://evil.example/nyabi-gh/undertone"), null);
-    assert.equal(downloadUrlFor("https://github.com/nyabi-gh/undertone/../../other"), null);
+    assert.equal(downloadUrlFor("http://github.com/nyabi-gh/mollu"), null);
+    assert.equal(downloadUrlFor("https://evil.example/nyabi-gh/mollu"), null);
+    assert.equal(downloadUrlFor("https://github.com/nyabi-gh/mollu/../../other"), null);
     assert.equal(downloadUrlFor(""), null);
     assert.equal(downloadUrlFor(undefined), null);
 });
@@ -1494,7 +1494,7 @@ check("updater: the download url is the latest release asset, from meta.source a
 await checkAsync("updater: a repository with no release reports unavailable, not a failure", async () => {
     const results = [];
     const updater = new Updater({
-        meta: { source: "https://github.com/nyabi-gh/undertone", version: "1.0.0" },
+        meta: { source: "https://github.com/nyabi-gh/mollu", version: "1.0.0" },
         settings: { current: { autoUpdate: true } },
         onResult: (result) => results.push(result),
     });
@@ -2642,7 +2642,7 @@ await checkAsync(
         const make = (answer) => {
             const log = { results: [], asked: 0, written: [] };
             const updater = new Updater({
-                meta: { source: "https://github.com/nyabi-gh/Undertone", version: "1.2.0" },
+                meta: { source: "https://github.com/nyabi-gh/Mollu", version: "1.2.0" },
                 settings: { current: { autoUpdate: true } },
                 onResult: (result) => log.results.push(result),
                 confirm: async (offer) => {

@@ -16,7 +16,7 @@ A BetterDiscord plugin that translates Discord messages and shows the translatio
 
 ## Installing
 
-1. Download [**Mollu.plugin.js**](https://github.com/nyabi-gh/Undertone/releases/latest/download/Mollu.plugin.js).
+1. Download [**Mollu.plugin.js**](https://github.com/nyabi-gh/Mollu/releases/latest/download/Mollu.plugin.js).
 2. In BetterDiscord, go to Settings → Plugins → **Open Plugins Folder** and drop the file in.
 3. Enable **Mollu** in the plugin list.
 

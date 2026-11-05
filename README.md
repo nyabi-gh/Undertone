@@ -16,7 +16,7 @@
 
 ## 설치
 
-1. [**Mollu.plugin.js**](https://github.com/nyabi-gh/Undertone/releases/latest/download/Mollu.plugin.js) 를 받습니다.
+1. [**Mollu.plugin.js**](https://github.com/nyabi-gh/Mollu/releases/latest/download/Mollu.plugin.js) 를 받습니다.
 2. BetterDiscord 설정 → Plugins → **Open Plugins Folder** 를 눌러 열리는 폴더에 넣습니다.
 3. 플러그인 목록에서 **Mollu** 를 켭니다.
 
