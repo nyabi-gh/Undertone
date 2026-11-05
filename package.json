@@ -1,6 +1,6 @@
 {
     "name": "mollu",
-    "version": "1.5.2",
+    "version": "1.5.3",
     "description": "BetterDiscord plugin that translates messages in chosen Discord servers into the language you pick",
     "private": true,
     "type": "module",
