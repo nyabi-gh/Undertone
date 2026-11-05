@@ -10,8 +10,8 @@ const meta = JSON.parse(readFileSync(join(root, "meta.json"), "utf8"));
 
 const outName = `${meta.name}.plugin.js`;
 const outfile = join(root, "dist", outName);
-// Releases from before the rename only update from this file name.
-const BRIDGES = ["Mollu"];
+// 1.5.x releases, named Undertone, only update from this file name.
+const BRIDGES = ["Undertone"];
 
 const banner = `/**\n${Object.entries(meta)
     .map(([key, value]) => ` * @${key} ${value}`)

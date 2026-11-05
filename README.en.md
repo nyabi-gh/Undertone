@@ -1,10 +1,10 @@
 [한국어](README.md) · **English**
 
-# Undertone
+# Mollu
 
 A BetterDiscord plugin that translates Discord messages and shows the translation right under the original.
 
-> Formerly **Mollu**. The automatic update switches you to Undertone and brings your settings and API keys along.
+> Versions 1.5.x went by **Undertone**. The automatic update brings you back to Mollu, along with your settings and API keys.
 
 ## Features
 
@@ -16,9 +16,9 @@ A BetterDiscord plugin that translates Discord messages and shows the translatio
 
 ## Installing
 
-1. Download [**Undertone.plugin.js**](https://github.com/nyabi-gh/Undertone/releases/latest/download/Undertone.plugin.js).
+1. Download [**Mollu.plugin.js**](https://github.com/nyabi-gh/Undertone/releases/latest/download/Mollu.plugin.js).
 2. In BetterDiscord, go to Settings → Plugins → **Open Plugins Folder** and drop the file in.
-3. Enable **Undertone** in the plugin list.
+3. Enable **Mollu** in the plugin list.
 
 BetterDiscord 1.14.0 or newer is required.
 
@@ -39,7 +39,7 @@ DeepL is the easiest free start. The others read more naturally and keep tone an
 Then, in the plugin settings:
 
 1. Choose your service under `Translation backend` and paste the key into `API key`.
-2. Right-click a server icon → **Translate with Undertone**, or turn on `Translate in every server`.
+2. Right-click a server icon → **Translate with Mollu**, or turn on `Translate in every server`.
 3. To translate DMs as well, turn on `Translate direct messages`.
 
 Every other setting explains itself in the panel.
@@ -59,14 +59,14 @@ Change them under `Fine-tuning` in settings.
 
 - If the target language is the language the server already speaks, there is nothing to translate.
 - Your own messages are skipped by default. Turn on `Translate my own messages` under `Fine-tuning` to test with your own typing.
-- For a translation that came out wrong, right-click the message → **Translate again with Undertone**.
+- For a translation that came out wrong, right-click the message → **Translate again with Mollu**.
 - Right after a large Discord update, translations may stop appearing. Wait for a plugin update.
 
 ## Privacy
 
 - Only the text of messages that need translating is sent to the service. Mentions, emoji, links and code are swapped for placeholders first.
 - With `Translate direct messages` or `Translate the messages I send` on, DMs and what you type are sent too.
-- Your API key and translations are stored unencrypted in `Undertone.config.json` in the plugins folder. Do not share it. To erase everything, disable the plugin and delete that file.
+- Your API key and translations are stored unencrypted in `Mollu.config.json` in the plugins folder. Do not share it. To erase everything, disable the plugin and delete that file.
 
 ## Releasing (maintainers)
 
@@ -76,4 +76,4 @@ Automatic updates install only signed releases.
 2. Store it as a repository secret: `gh secret set MOLLU_SIGNING_KEY < ~/.config/mollu/update-signing-key.pem`
 3. Bump the version in `meta.json` and `package.json`, commit the built `dist/`, and push a matching tag (such as `v1.5.0`). The workflow checks, signs and publishes the release.
 
-`dist/Mollu.plugin.js` is what versions 1.4.1 and older update from, so keep it in every release.
+`dist/Undertone.plugin.js` is what versions 1.5.x update from, so keep it in every release.

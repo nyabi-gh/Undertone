@@ -64,7 +64,7 @@ function renderBlocks(source, ctx) {
         if (QUOTE_REST.test(line)) {
             flush(false);
             const rest = [line.replace(QUOTE_REST, ""), ...lines.slice(i + 1)].join("\n");
-            out.push(block("undertone-md-quote", rest, ctx));
+            out.push(block("mollu-md-quote", rest, ctx));
             return out;
         }
         if (QUOTE.test(line)) {
@@ -72,7 +72,7 @@ function renderBlocks(source, ctx) {
             const quoted = [];
             while (i < lines.length && QUOTE.test(lines[i])) quoted.push(QUOTE.exec(lines[i++])[1]);
             i -= 1;
-            out.push(block("undertone-md-quote", quoted.join("\n"), ctx));
+            out.push(block("mollu-md-quote", quoted.join("\n"), ctx));
             continue;
         }
         const heading = HEADING.exec(line);
@@ -81,8 +81,8 @@ function renderBlocks(source, ctx) {
             flush(false);
             out.push(
                 heading
-                    ? block(`undertone-md-h${heading[1].length}`, heading[2], ctx)
-                    : block("undertone-md-subtext", subtext[1], ctx),
+                    ? block(`mollu-md-h${heading[1].length}`, heading[2], ctx)
+                    : block("mollu-md-subtext", subtext[1], ctx),
             );
             continue;
         }
@@ -143,7 +143,7 @@ function anchor(url, children, ctx) {
         "a",
         {
             key: ctx.key++,
-            className: "undertone-md-link",
+            className: "mollu-md-link",
             href: url,
             title: url,
             target: "_blank",
@@ -165,9 +165,9 @@ function Spoiler({ children }) {
     return React.createElement(
         "span",
         shown
-            ? { className: "undertone-md-spoiler undertone-md-spoiler--shown" }
+            ? { className: "mollu-md-spoiler mollu-md-spoiler--shown" }
             : {
-                  className: "undertone-md-spoiler",
+                  className: "mollu-md-spoiler",
                   role: "button",
                   tabIndex: 0,
                   "aria-label": t("block.spoiler"),
@@ -186,7 +186,7 @@ function renderToken(token, stores, guildId, key) {
         const [, animated, name, id] = emoji;
         return React.createElement("img", {
             key,
-            className: "undertone-translation__emoji",
+            className: "mollu-translation__emoji",
             src: `${EMOJI_CDN}/${id}.${animated ? "gif" : "webp"}?size=44&quality=lossless`,
             alt: `:${name}:`,
             title: `:${name}:`,
@@ -208,12 +208,12 @@ function renderToken(token, stores, guildId, key) {
         const formatted = formatTimestamp(Number(timestamp[1]), timestamp[2]);
         return formatted == null
             ? token
-            : React.createElement("span", { key, className: "undertone-translation__mention" }, formatted);
+            : React.createElement("span", { key, className: "mollu-translation__mention" }, formatted);
     }
 
     const code = FENCED_CODE.exec(token) || INLINE_CODE.exec(token);
     if (code) {
-        return React.createElement("code", { key, className: "undertone-translation__code" }, code[1]);
+        return React.createElement("code", { key, className: "mollu-translation__code" }, code[1]);
     }
 
     return token;
@@ -221,11 +221,7 @@ function renderToken(token, stores, guildId, key) {
 
 function mention(key, name, sigil, fallback) {
     if (!name) return fallback;
-    return React.createElement(
-        "span",
-        { key, className: "undertone-translation__mention" },
-        `${sigil}${name}`,
-    );
+    return React.createElement("span", { key, className: "mollu-translation__mention" }, `${sigil}${name}`);
 }
 
 const TIME_STYLES = {

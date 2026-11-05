@@ -1,13 +1,30 @@
-import { NAME, LEGACY_NAMES } from "./constants.js";
+import { NAME, INTERIM_NAME, LEGACY_NAMES, CACHE_KEY } from "./constants.js";
 import { logger } from "./lib/logger.js";
 
 const POLL_MS = 500;
+const DATA_KEYS = ["settings", CACHE_KEY];
 
-// Builds from before the rename update themselves from Mollu.plugin.js and only accept a file
-// named Mollu, so each release also ships this build under that name. Started that way, it puts
-// Undertone in its place and removes itself.
+// 1.5.x builds, named Undertone, update themselves from Undertone.plugin.js and only accept a file
+// named Undertone, so each release also ships this build under that name. Started that way, it
+// puts Mollu in its place and removes itself.
 export function isLegacyCopy(meta) {
     return LEGACY_NAMES.includes(meta?.name);
+}
+
+// Becoming Undertone left Mollu 1.4.x's data in place, so reading Mollu's first would bring back
+// settings from before then. Moved rather than copied, so it cannot win over what Mollu saves later.
+export function reclaimInterimData() {
+    for (const key of DATA_KEYS) {
+        try {
+            const value = BdApi.Data.load(INTERIM_NAME, key);
+            if (value == null) continue;
+            BdApi.Data.save(NAME, key, value);
+            BdApi.Data.delete(INTERIM_NAME, key);
+            logger.info(`moved ${key} over from ${INTERIM_NAME}`);
+        } catch (e) {
+            logger.error(`could not move ${key} over from ${INTERIM_NAME}`, e);
+        }
+    }
 }
 
 export function asLegacy(text, legacyName) {

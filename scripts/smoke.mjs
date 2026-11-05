@@ -1381,25 +1381,29 @@ check("hotkey: only the exact combo fires, and never mid-composition", () => {
 });
 
 const { isLegacyCopy, asCurrent, handOff } = await import("../src/rename.js");
-const bridgePath = join(root, "dist", "Mollu.plugin.js");
+const bridgePath = join(root, "dist", "Undertone.plugin.js");
 
-check("rename: Mollu.plugin.js is this build under the old name, so old updaters take it", () => {
+check("rename: Undertone.plugin.js is this build under the 1.5 name, so 1.5 updaters take it", () => {
     const bridge = readFileSync(bridgePath, "utf8");
     const current = readFileSync(bundlePath, "utf8");
-    const oldCheck = /@name\s+Mollu\s/;
-    assert.ok(oldCheck.test(bridge), "releases before the rename only install a file named Mollu");
+    const oldCheck = /@name\s+Undertone\s/;
+    assert.ok(oldCheck.test(bridge), "1.5.x releases only install a file named Undertone");
     assert.ok(!oldCheck.test(current));
-    assert.equal(asCurrent(bridge, "Mollu"), current, "the hand-off must write exactly the release build");
-    assert.ok(isLegacyCopy({ name: "Mollu" }));
+    assert.equal(
+        asCurrent(bridge, "Undertone"),
+        current,
+        "the hand-off must write exactly the release build",
+    );
+    assert.ok(isLegacyCopy({ name: "Undertone" }));
     assert.ok(!isLegacyCopy({ name: NAME }));
 });
 
-check("rename: started as Mollu, the plugin hands off instead of translating", () => {
+check("rename: started as Undertone, the plugin hands off instead of translating", () => {
     const previous = BdApi.DOM.addStyle;
     let styled = false;
     BdApi.DOM.addStyle = () => (styled = true);
     try {
-        const instance = new Plugin({ name: "Mollu" });
+        const instance = new Plugin({ name: "Undertone" });
         instance.start();
         instance.stop();
     } finally {
@@ -1408,9 +1412,9 @@ check("rename: started as Mollu, the plugin hands off instead of translating", (
     assert.equal(styled, false);
 });
 
-await checkAsync("rename: the hand-off writes Undertone, turns it on and removes Mollu", async () => {
+await checkAsync("rename: the hand-off writes Mollu, turns it on and removes Undertone", async () => {
     const bridge = readFileSync(bridgePath, "utf8");
-    const files = new Map([["plugins/Mollu.plugin.js", bridge]]);
+    const files = new Map([["plugins/Undertone.plugin.js", bridge]]);
     const fs = {
         existsSync: (file) => files.has(file),
         readFileSync: (file) => files.get(file),
@@ -1426,19 +1430,45 @@ await checkAsync("rename: the hand-off writes Undertone, turns it on and removes
         enable: (name) => enabled.push(name),
     };
     try {
-        const meta = { name: "Mollu", filename: "Mollu.plugin.js" };
+        const meta = { name: "Undertone", filename: "Undertone.plugin.js" };
         assert.equal(await handOff(meta, { fs, path, timeoutMs: 0 }), true);
         assert.deepEqual([...files.keys()], [`plugins/${NAME}.plugin.js`]);
         assert.equal(files.get(`plugins/${NAME}.plugin.js`), readFileSync(bundlePath, "utf8"));
         assert.deepEqual(enabled, [NAME]);
 
         files.clear();
-        files.set("plugins/Mollu.plugin.js", bridge);
+        files.set("plugins/Undertone.plugin.js", bridge);
         BdApi.Plugins.get = () => null;
         assert.equal(await handOff(meta, { fs, path, timeoutMs: 0 }), false);
-        assert.ok(files.has("plugins/Mollu.plugin.js"), "Mollu stays until Undertone is running");
+        assert.ok(files.has("plugins/Undertone.plugin.js"), "Undertone stays until Mollu is running");
     } finally {
         BdApi.Plugins = previous;
+    }
+});
+
+check("rename: what Undertone saved replaces what Mollu 1.4 left behind, and moves only once", () => {
+    const previous = BdApi.Data;
+    const store = new Map([
+        ["Mollu::settings", { apiKey: "sk-from-1.4", targetLanguage: "ja" }],
+        ["Mollu::" + CACHE_KEY, [["old", "오래된"]]],
+        ["Undertone::settings", { apiKey: "sk-from-1.5", targetLanguage: "ko" }],
+        ["Undertone::" + CACHE_KEY, [["new", "새것"]]],
+    ]);
+    BdApi.Data = {
+        load: (name, key) => store.get(`${name}::${key}`) ?? null,
+        save: (name, key, value) => store.set(`${name}::${key}`, value),
+        delete: (name, key) => store.delete(`${name}::${key}`),
+    };
+    try {
+        const instance = new Plugin({ name: NAME });
+        assert.equal(instance._settings.current.apiKey, "sk-from-1.5", "the settings read are Undertone's");
+        assert.deepEqual(store.get(`${NAME}::${CACHE_KEY}`), [["new", "새것"]]);
+        assert.ok(!store.has("Undertone::settings") && !store.has(`Undertone::${CACHE_KEY}`));
+
+        store.set(`${NAME}::settings`, { apiKey: "sk-changed-in-mollu" });
+        assert.equal(new Plugin({ name: NAME })._settings.current.apiKey, "sk-changed-in-mollu");
+    } finally {
+        BdApi.Data = previous;
     }
 });
 
@@ -1447,7 +1477,7 @@ const { downloadUrlFor, readVersion, isNewer, Updater, verifySignature } = await
 check("updater: the download url is the latest release asset, from meta.source and nowhere else", () => {
     assert.equal(
         downloadUrlFor("https://github.com/nyabi-gh/undertone"),
-        "https://github.com/nyabi-gh/undertone/releases/latest/download/Undertone.plugin.js",
+        "https://github.com/nyabi-gh/undertone/releases/latest/download/Mollu.plugin.js",
     );
     assert.equal(
         downloadUrlFor("https://github.com/nyabi-gh/undertone.git"),
@@ -1479,11 +1509,11 @@ await checkAsync("updater: a repository with no release reports unavailable, not
     assert.deepEqual(results, [{ status: "unavailable" }]);
 });
 
-check("updater: a downloaded file is only written when it is a newer Undertone build", () => {
+check("updater: a downloaded file is only written when it is a newer Mollu build", () => {
     const banner = (name, version) => `/**\n * @name ${name}\n * @version ${version}\n */\nvar x = 1;`;
-    assert.equal(readVersion(banner("Undertone", "1.2.0")), "1.2.0");
-    assert.equal(readVersion(banner("Undertone2", "1.2.0")), null);
-    assert.equal(readVersion(banner("NotUndertone", "1.2.0")), null);
+    assert.equal(readVersion(banner("Mollu", "1.2.0")), "1.2.0");
+    assert.equal(readVersion(banner("Mollu2", "1.2.0")), null);
+    assert.equal(readVersion(banner("NotMollu", "1.2.0")), null);
     assert.equal(readVersion("var x = 1;"), null);
     assert.equal(readVersion(undefined), null);
 
@@ -2263,7 +2293,7 @@ check("rich text: Markdown renders as elements, and a spoiler stays hidden until
     assert.equal(spoiler.props.children[0], "범인은 ");
     assert.equal(spoiler.props.children[1].type, "strong");
     const hidden = spoiler.type({ children: spoiler.props.children });
-    assert.equal(hidden.props.className, "undertone-md-spoiler");
+    assert.equal(hidden.props.className, "mollu-md-spoiler");
     assert.equal(hidden.props.role, "button");
 
     const nodes = renderSegments(
@@ -2275,8 +2305,8 @@ check("rich text: Markdown renders as elements, and a spoiler stays hidden until
         {},
         null,
     );
-    assert.equal(nodes[0].props.className, "undertone-md-h1");
-    assert.equal(nodes[1].props.className, "undertone-md-quote");
+    assert.equal(nodes[0].props.className, "mollu-md-h1");
+    assert.equal(nodes[1].props.className, "mollu-md-quote");
     assert.equal(nodes[2], "본문 ");
     assert.equal(nodes[3].type, "a");
     assert.equal(nodes[3].props.href, "https://example.com/a");
@@ -2427,27 +2457,23 @@ check("context menu: a message's translation is hidden or asked for again from i
         show.action();
         assert.ok(blocks.isHidden("m1"));
         assert.deepEqual(events, ["a:refresh"], "only that message's block redraws");
-        assert.deepEqual(ids("m1"), ["undertone-show-translation"], "a hidden translation can only be shown");
+        assert.deepEqual(ids("m1"), ["mollu-show-translation"], "a hidden translation can only be shown");
         open("m1")[0].action();
         assert.equal(blocks.isHidden("m1"), false);
 
         events.length = 0;
         open("m1")
-            .find((item) => item.id === "undertone-retranslate")
+            .find((item) => item.id === "mollu-retranslate")
             .action();
         assert.equal(translator.isCached("hello there"), false);
         assert.deepEqual(events, ["a:retranslate", "b:retranslate"], "every block with that text is redone");
-        assert.deepEqual(
-            ids("m1"),
-            ["undertone-show-translation"],
-            "nothing to redo until the new one lands",
-        );
+        assert.deepEqual(ids("m1"), ["mollu-show-translation"], "nothing to redo until the new one lands");
 
         translator._cache.set(translator._cacheKey("hello there", "ko"), null);
         status = "skip";
         assert.deepEqual(
             ids("m1"),
-            ["undertone-retranslate"],
+            ["mollu-retranslate"],
             "a sentence judged already translated can be retried",
         );
         status = "idle";
@@ -2458,7 +2484,7 @@ check("context menu: a message's translation is hidden or asked for again from i
         settings.current.model = "";
         translator.remember("hello there", "안녕하세요", "ko");
         status = "done";
-        assert.deepEqual(ids("m1"), ["undertone-show-translation"], "DeepL would answer the same again");
+        assert.deepEqual(ids("m1"), ["mollu-show-translation"], "DeepL would answer the same again");
 
         unmount();
         assert.deepEqual(open("m1"), []);
@@ -2488,17 +2514,13 @@ check("translation block: hidden leaves nothing in automatic mode and the button
         return block.props.children[1];
     };
 
-    assert.equal(render(true).props.className, "undertone-translation");
+    assert.equal(render(true).props.className, "mollu-translation");
     blocks.setHidden("m1", true);
     assert.equal(render(true), null);
-    assert.equal(render(false).props.className, "undertone-translation__trigger");
+    assert.equal(render(false).props.className, "mollu-translation__trigger");
 
     blocks.clear();
-    assert.equal(
-        render(false).props.className,
-        "undertone-translation",
-        "stopping the plugin shows them again",
-    );
+    assert.equal(render(false).props.className, "mollu-translation", "stopping the plugin shows them again");
 });
 
 await checkAsync("translation block: a failure on screen is asked again by itself, a few times", async () => {
@@ -2600,7 +2622,7 @@ await checkAsync(
                 "base64",
             );
 
-        const release = "/**\n * @name Undertone\n * @version 1.3.0\n */\nvar x = 1; // 번역\n";
+        const release = "/**\n * @name Mollu\n * @version 1.3.0\n */\nvar x = 1; // 번역\n";
         assert.equal(
             await verifySignature(release, signed(release), spki),
             true,

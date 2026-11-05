@@ -11,7 +11,7 @@ import { MessagePatch } from "./message-patch.js";
 import { Hotkey } from "./hotkey.js";
 import { OutgoingPatch, findMessageActions, waitForMessageActions } from "./outgoing-patch.js";
 import { Updater } from "./updater.js";
-import { isLegacyCopy, handOff, retireLegacy } from "./rename.js";
+import { isLegacyCopy, handOff, retireLegacy, reclaimInterimData } from "./rename.js";
 import { ContextMenus } from "./context-menu.js";
 import { BlockControls } from "./ui/block-controls.js";
 import { findMessageContent, waitForMessageContent, createStores } from "./discord.js";
@@ -23,10 +23,12 @@ import { t } from "./i18n.js";
 import { getLanguage } from "./languages.js";
 import { logger } from "./lib/logger.js";
 
-export default class Undertone {
+export default class Mollu {
     constructor(meta) {
         this._meta = meta;
         this._stores = createStores();
+        // Settings reads its data the moment it is built.
+        reclaimInterimData();
         this._settings = new Settings({
             guildName: (id) => this._stores.guildName(id),
             channelName: (id) => this._stores.channelName(id),

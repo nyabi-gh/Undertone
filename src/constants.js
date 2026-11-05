@@ -1,6 +1,9 @@
-export const NAME = "Undertone";
+export const NAME = "Mollu";
 
-export const LEGACY_NAMES = ["Mollu", "KoreanAutoTranslator"];
+// What 1.5.x was called. It ran after Mollu 1.4.x, so its data is newer than what that left behind.
+export const INTERIM_NAME = "Undertone";
+
+export const LEGACY_NAMES = [INTERIM_NAME, "KoreanAutoTranslator"];
 
 export const DEFAULT_SETTINGS = Object.freeze({
     provider: "deepseek",

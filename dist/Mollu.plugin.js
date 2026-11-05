@@ -27,13 +27,14 @@ var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: tru
 // src/index.js
 var index_exports = {};
 __export(index_exports, {
-  default: () => Undertone
+  default: () => Mollu
 });
 module.exports = __toCommonJS(index_exports);
 
 // src/constants.js
-var NAME = "Undertone";
-var LEGACY_NAMES = ["Mollu", "KoreanAutoTranslator"];
+var NAME = "Mollu";
+var INTERIM_NAME = "Undertone";
+var LEGACY_NAMES = [INTERIM_NAME, "KoreanAutoTranslator"];
 var DEFAULT_SETTINGS = Object.freeze({
   provider: "deepseek",
   apiKey: "",
@@ -127,7 +128,7 @@ var STRINGS = {
     "toast.needGuilds": "Add at least one target server id in the settings.",
     "toast.failed": "Translation failed · {message}",
     "toast.startFailed": "Could not start · {message}. Check the console log.",
-    "toast.renamed": "Mollu is now Undertone. Your settings and API keys came along.",
+    "toast.renamed": "Undertone is Mollu again. Your settings and API keys came along.",
     "toast.autoOn": "Automatic translation on",
     "toast.autoOff": "Automatic translation off · manual mode",
     "toast.outgoingOn": "Your messages will be sent in {language}",
@@ -140,7 +141,7 @@ var STRINGS = {
     "toast.updateFailed": "Could not check for updates · {message}",
     "toast.updateUnsigned": "v{version} is out but carries no signature, so it was not installed",
     "toast.updateBadSignature": "v{version} failed its signature check and was not installed. Download it only from the official repository.",
-    "update.title": "Undertone v{version} is available",
+    "update.title": "Mollu v{version} is available",
     "update.body": "Installed: v{current}. The signature checks out. What changed: {notes}",
     "update.confirm": "Install",
     "update.cancel": "Later",
@@ -181,11 +182,11 @@ var STRINGS = {
     "settings.excludedChannelIds": "Channels left untranslated",
     "settings.excludedChannelIds.note": "Filled in when you switch a channel off from its right-click menu. Threads follow their channel.",
     "settings.current": "Now: {names}",
-    "menu.translateGuild": "Translate with Undertone",
-    "menu.everyGuild": "Translate with Undertone (every server is on)",
-    "menu.translateChannel": "Translate with Undertone",
-    "menu.showTranslation": "Show Undertone translation",
-    "menu.retranslate": "Translate again with Undertone",
+    "menu.translateGuild": "Translate with Mollu",
+    "menu.everyGuild": "Translate with Mollu (every server is on)",
+    "menu.translateChannel": "Translate with Mollu",
+    "menu.showTranslation": "Show Mollu translation",
+    "menu.retranslate": "Translate again with Mollu",
     "settings.translateDms": "Translate direct messages",
     "settings.translateDms.note": "Private conversations are sent to the backend too.",
     "settings.targetLanguage": "Translate into",
@@ -255,7 +256,7 @@ var STRINGS = {
     "toast.needGuilds": "설정에서 대상 서버 ID를 추가하세요.",
     "toast.failed": "번역 실패 · {message}",
     "toast.startFailed": "시작하지 못했습니다 · {message}. 콘솔 로그를 확인하세요.",
-    "toast.renamed": "Mollu가 Undertone으로 이름을 바꿨습니다. 설정과 API 키는 그대로 옮겨졌습니다.",
+    "toast.renamed": "Undertone이 다시 Mollu로 돌아왔습니다. 설정과 API 키는 그대로 옮겨졌습니다.",
     "toast.autoOn": "자동 번역 켜짐",
     "toast.autoOff": "자동 번역 꺼짐 · 수동 모드",
     "toast.outgoingOn": "보내는 메시지를 {language} 로 번역합니다",
@@ -268,7 +269,7 @@ var STRINGS = {
     "toast.updateFailed": "업데이트를 확인하지 못했습니다 · {message}",
     "toast.updateUnsigned": "v{version} 이 나왔지만 서명이 없어 설치하지 않았습니다",
     "toast.updateBadSignature": "v{version} 의 서명이 맞지 않아 설치하지 않았습니다. 공식 저장소에서만 받으세요.",
-    "update.title": "Undertone v{version} 이 나왔습니다",
+    "update.title": "Mollu v{version} 이 나왔습니다",
     "update.body": "지금 버전: v{current}. 서명을 확인했습니다. 변경 내역: {notes}",
     "update.confirm": "설치",
     "update.cancel": "나중에",
@@ -309,11 +310,11 @@ var STRINGS = {
     "settings.excludedChannelIds": "번역하지 않을 채널",
     "settings.excludedChannelIds.note": "채널 우클릭 메뉴에서 끄면 채워집니다. 스레드는 채널을 따릅니다.",
     "settings.current": "현재: {names}",
-    "menu.translateGuild": "Undertone으로 번역",
-    "menu.everyGuild": "Undertone으로 번역 (모든 서버가 켜져 있음)",
-    "menu.translateChannel": "Undertone으로 번역",
-    "menu.showTranslation": "Undertone 번역 보이기",
-    "menu.retranslate": "Undertone으로 다시 번역",
+    "menu.translateGuild": "Mollu로 번역",
+    "menu.everyGuild": "Mollu로 번역 (모든 서버가 켜져 있음)",
+    "menu.translateChannel": "Mollu로 번역",
+    "menu.showTranslation": "Mollu 번역 보이기",
+    "menu.retranslate": "Mollu로 다시 번역",
     "settings.translateDms": "DM 도 번역",
     "settings.translateDms.note": "사적인 대화도 번역 백엔드로 전송됩니다.",
     "settings.targetLanguage": "번역할 언어",
@@ -1307,7 +1308,7 @@ var Settings = class {
   buildPanel() {
     const settings = this;
     const useFocusLock = findFocusLock();
-    function UndertoneSettings() {
+    function MolluSettings() {
       const [revision, bump] = React.useState(0);
       const root = React.useRef(null);
       const modal = React.useMemo(
@@ -1335,7 +1336,7 @@ var Settings = class {
         React.cloneElement(panel, { key: `panel-${revision}` })
       );
     }
-    return React.createElement(UndertoneSettings);
+    return React.createElement(MolluSettings);
   }
   _panelSpec() {
     const v = this._values;
@@ -1576,7 +1577,7 @@ var Settings = class {
     };
   }
 };
-var SETTINGS_CLASS = "undertone-settings";
+var SETTINGS_CLASS = "mollu-settings";
 var CUSTOM_MODEL_FIELD = "customModel";
 function modelFields(v, custom) {
   const models6 = knownModels(v.provider);
@@ -2448,7 +2449,7 @@ function renderBlocks(source, ctx) {
     if (QUOTE_REST.test(line)) {
       flush(false);
       const rest = [line.replace(QUOTE_REST, ""), ...lines.slice(i + 1)].join("\n");
-      out.push(block("undertone-md-quote", rest, ctx));
+      out.push(block("mollu-md-quote", rest, ctx));
       return out;
     }
     if (QUOTE.test(line)) {
@@ -2456,7 +2457,7 @@ function renderBlocks(source, ctx) {
       const quoted = [];
       while (i < lines.length && QUOTE.test(lines[i])) quoted.push(QUOTE.exec(lines[i++])[1]);
       i -= 1;
-      out.push(block("undertone-md-quote", quoted.join("\n"), ctx));
+      out.push(block("mollu-md-quote", quoted.join("\n"), ctx));
       continue;
     }
     const heading = HEADING.exec(line);
@@ -2464,7 +2465,7 @@ function renderBlocks(source, ctx) {
     if (heading || subtext) {
       flush(false);
       out.push(
-        heading ? block(`undertone-md-h${heading[1].length}`, heading[2], ctx) : block("undertone-md-subtext", subtext[1], ctx)
+        heading ? block(`mollu-md-h${heading[1].length}`, heading[2], ctx) : block("mollu-md-subtext", subtext[1], ctx)
       );
       continue;
     }
@@ -2518,7 +2519,7 @@ function anchor(url, children, ctx) {
     "a",
     {
       key: ctx.key++,
-      className: "undertone-md-link",
+      className: "mollu-md-link",
       href: url,
       title: url,
       target: "_blank",
@@ -2537,8 +2538,8 @@ function Spoiler({ children }) {
   };
   return React.createElement(
     "span",
-    shown ? { className: "undertone-md-spoiler undertone-md-spoiler--shown" } : {
-      className: "undertone-md-spoiler",
+    shown ? { className: "mollu-md-spoiler mollu-md-spoiler--shown" } : {
+      className: "mollu-md-spoiler",
       role: "button",
       tabIndex: 0,
       "aria-label": t("block.spoiler"),
@@ -2556,7 +2557,7 @@ function renderToken(token, stores, guildId, key) {
     const [, animated, name, id6] = emoji;
     return React.createElement("img", {
       key,
-      className: "undertone-translation__emoji",
+      className: "mollu-translation__emoji",
       src: `${EMOJI_CDN}/${id6}.${animated ? "gif" : "webp"}?size=44&quality=lossless`,
       alt: `:${name}:`,
       title: `:${name}:`,
@@ -2572,21 +2573,17 @@ function renderToken(token, stores, guildId, key) {
   const timestamp = TIMESTAMP.exec(token);
   if (timestamp) {
     const formatted = formatTimestamp(Number(timestamp[1]), timestamp[2]);
-    return formatted == null ? token : React.createElement("span", { key, className: "undertone-translation__mention" }, formatted);
+    return formatted == null ? token : React.createElement("span", { key, className: "mollu-translation__mention" }, formatted);
   }
   const code = FENCED_CODE.exec(token) || INLINE_CODE.exec(token);
   if (code) {
-    return React.createElement("code", { key, className: "undertone-translation__code" }, code[1]);
+    return React.createElement("code", { key, className: "mollu-translation__code" }, code[1]);
   }
   return token;
 }
 function mention(key, name, sigil, fallback) {
   if (!name) return fallback;
-  return React.createElement(
-    "span",
-    { key, className: "undertone-translation__mention" },
-    `${sigil}${name}`
-  );
+  return React.createElement("span", { key, className: "mollu-translation__mention" }, `${sigil}${name}`);
 }
 var TIME_STYLES = {
   t: { timeStyle: "short" },
@@ -2902,7 +2899,7 @@ function TranslationBlock({ text, messageId, translator, blocks, settings, store
     null,
     React.createElement("div", {
       ref: anchorRef,
-      className: "undertone-translation__anchor",
+      className: "mollu-translation__anchor",
       "aria-hidden": "true"
     }),
     hidden ? autoTranslate ? null : renderTrigger(bodyRef, reveal) : renderBody(status, result, {
@@ -2919,7 +2916,7 @@ function TranslationBlock({ text, messageId, translator, blocks, settings, store
 function renderTrigger(ref, onClick) {
   return React.createElement(
     "button",
-    { ref, type: "button", className: "undertone-translation__trigger", onClick },
+    { ref, type: "button", className: "mollu-translation__trigger", onClick },
     t("block.trigger")
   );
 }
@@ -2934,7 +2931,7 @@ function renderBody(status, result, ctx) {
   if (status === "pending") {
     return showPending ? React.createElement(
       "div",
-      { ref, className: "undertone-translation undertone-translation--pending" },
+      { ref, className: "mollu-translation mollu-translation--pending" },
       t(result?.waiting ? "block.waiting" : "block.pending")
     ) : null;
   }
@@ -2944,7 +2941,7 @@ function renderBody(status, result, ctx) {
       {
         ref,
         type: "button",
-        className: "undertone-translation undertone-translation--error",
+        className: "mollu-translation mollu-translation--error",
         title: t("block.errorTitle"),
         onClick: onTrigger
       },
@@ -2953,9 +2950,9 @@ function renderBody(status, result, ctx) {
   }
   return React.createElement(
     "div",
-    { ref, className: "undertone-translation", lang: language },
-    React.createElement("span", { className: "undertone-translation__badge" }, badge),
-    React.createElement("span", { className: "undertone-translation__text" }, ...content)
+    { ref, className: "mollu-translation", lang: language },
+    React.createElement("span", { className: "mollu-translation__badge" }, badge),
+    React.createElement("span", { className: "mollu-translation__text" }, ...content)
   );
 }
 function useDisplaySettings(settings) {
@@ -3027,7 +3024,7 @@ var MessagePatch = class {
       return ret;
     }
     const block2 = React.createElement(TranslationBlock, {
-      key: "undertone-translation",
+      key: "mollu-translation",
       text: message.content,
       messageId: message.id,
       guildId,
@@ -3381,8 +3378,22 @@ function writePlugin(text) {
 
 // src/rename.js
 var POLL_MS = 500;
+var DATA_KEYS = ["settings", CACHE_KEY];
 function isLegacyCopy(meta) {
   return LEGACY_NAMES.includes(meta?.name);
+}
+function reclaimInterimData() {
+  for (const key of DATA_KEYS) {
+    try {
+      const value = BdApi.Data.load(INTERIM_NAME, key);
+      if (value == null) continue;
+      BdApi.Data.save(NAME, key, value);
+      BdApi.Data.delete(INTERIM_NAME, key);
+      logger.info(`moved ${key} over from ${INTERIM_NAME}`);
+    } catch (e) {
+      logger.error(`could not move ${key} over from ${INTERIM_NAME}`, e);
+    }
+  }
 }
 function asCurrent(text, legacyName) {
   return renameBanner(text, legacyName, NAME);
@@ -3472,7 +3483,7 @@ var ContextMenus = class {
     append(api, tree, [
       {
         type: "toggle",
-        id: "undertone-translate-guild",
+        id: "mollu-translate-guild",
         label: t(allGuilds ? "menu.everyGuild" : "menu.translateGuild"),
         checked: allGuilds || this._settings.guildIdSet.has(guildId),
         disabled: allGuilds,
@@ -3489,7 +3500,7 @@ var ContextMenus = class {
     append(api, tree, [
       {
         type: "toggle",
-        id: "undertone-translate-channel",
+        id: "mollu-translate-channel",
         label: t("menu.translateChannel"),
         checked: !this._settings.excludedChannelSet.has(channel.id),
         action: () => this._settings.toggleExcludedChannel(channel.id)
@@ -3504,7 +3515,7 @@ var ContextMenus = class {
     if (menu.canHide) {
       items.push({
         type: "toggle",
-        id: "undertone-show-translation",
+        id: "mollu-show-translation",
         label: t("menu.showTranslation"),
         checked: !menu.hidden,
         action: () => this._blocks.setHidden(messageId, !menu.hidden)
@@ -3513,7 +3524,7 @@ var ContextMenus = class {
     if (menu.canRetranslate && !getProvider(this._settings.current.provider).deterministic) {
       items.push({
         type: "text",
-        id: "undertone-retranslate",
+        id: "mollu-retranslate",
         label: t("menu.retranslate"),
         action: () => this._blocks.retranslate(messageId)
       });
@@ -3588,10 +3599,10 @@ var BlockControls = class {
 var STYLES = `
 /* BetterDiscord pins its dropdown list to the opening button with anchor() but never sets
    position-anchor, which Chrome 152 defaults to normal; the list then falls to the corner. */
-.undertone-settings .bd-select-options {
+.mollu-settings .bd-select-options {
     position-anchor: auto;
 }
-.undertone-translation__anchor {
+.mollu-translation__anchor {
     display: block;
     height: 0;
     margin: 0;
@@ -3599,7 +3610,7 @@ var STYLES = `
     pointer-events: none;
     overflow-anchor: none;
 }
-.undertone-translation {
+.mollu-translation {
     overflow-anchor: none;
     contain: layout style;
     margin-top: 2px;
@@ -3609,7 +3620,7 @@ var STYLES = `
     white-space: pre-wrap;
     word-break: break-word;
 }
-.undertone-translation__badge {
+.mollu-translation__badge {
     display: inline-block;
     margin-right: 6px;
     padding: 0 5px;
@@ -3621,20 +3632,20 @@ var STYLES = `
     color: var(--text-muted, #949ba4);
     background: var(--background-modifier-accent, rgba(148, 155, 164, 0.16));
 }
-.undertone-translation__emoji {
+.mollu-translation__emoji {
     width: 1.375em;
     height: 1.375em;
     margin: 0 1px;
     object-fit: contain;
     vertical-align: -0.3em;
 }
-.undertone-translation__mention {
+.mollu-translation__mention {
     padding: 0 2px;
     border-radius: 3px;
     color: var(--mention-foreground, #c9cdfb);
     background: var(--mention-background, rgba(88, 101, 242, 0.24));
 }
-.undertone-translation__code {
+.mollu-translation__code {
     padding: 0 3px;
     border-radius: 3px;
     font-family: var(--font-code, monospace);
@@ -3642,62 +3653,62 @@ var STYLES = `
     white-space: pre-wrap;
     background: var(--background-secondary, rgba(0, 0, 0, 0.2));
 }
-.undertone-md-h1,
-.undertone-md-h2,
-.undertone-md-h3,
-.undertone-md-subtext,
-.undertone-md-quote {
+.mollu-md-h1,
+.mollu-md-h2,
+.mollu-md-h3,
+.mollu-md-subtext,
+.mollu-md-quote {
     display: block;
 }
-.undertone-md-h1 {
+.mollu-md-h1 {
     font-size: 1.25em;
     font-weight: 700;
 }
-.undertone-md-h2 {
+.mollu-md-h2 {
     font-size: 1.15em;
     font-weight: 700;
 }
-.undertone-md-h3 {
+.mollu-md-h3 {
     font-size: 1.05em;
     font-weight: 700;
 }
-.undertone-md-subtext {
+.mollu-md-subtext {
     font-size: 0.8em;
 }
-.undertone-md-quote {
+.mollu-md-quote {
     margin: 2px 0;
     padding-left: 10px;
     border-left: 3px solid var(--background-modifier-accent, rgba(148, 155, 164, 0.4));
 }
-.undertone-md-link {
+.mollu-md-link {
     color: var(--text-link, #00a8fc);
     text-decoration: none;
 }
-.undertone-md-link:hover {
+.mollu-md-link:hover {
     text-decoration: underline;
 }
-.undertone-md-spoiler {
+.mollu-md-spoiler {
     padding: 0 2px;
     border-radius: 3px;
     color: transparent;
     background: var(--spoiler-hidden-background, #1e1f22);
     cursor: pointer;
 }
-.undertone-md-spoiler > * {
+.mollu-md-spoiler > * {
     opacity: 0;
 }
-.undertone-md-spoiler:focus-visible {
+.mollu-md-spoiler:focus-visible {
     outline: 2px solid var(--focus-primary, #00a8fc);
 }
-.undertone-md-spoiler--shown {
+.mollu-md-spoiler--shown {
     color: inherit;
     background: var(--spoiler-revealed-background, rgba(148, 155, 164, 0.16));
     cursor: auto;
 }
-.undertone-md-spoiler--shown > * {
+.mollu-md-spoiler--shown > * {
     opacity: 1;
 }
-.undertone-translation__trigger {
+.mollu-translation__trigger {
     display: inline-block;
     margin-top: 2px;
     padding: 0;
@@ -3710,15 +3721,15 @@ var STYLES = `
     opacity: 0.75;
     cursor: pointer;
 }
-.undertone-translation__trigger:hover {
+.mollu-translation__trigger:hover {
     opacity: 1;
     text-decoration: underline;
 }
-.undertone-translation--pending {
+.mollu-translation--pending {
     opacity: 0.6;
     font-style: italic;
 }
-.undertone-translation--error {
+.mollu-translation--error {
     display: block;
     padding: 0;
     border: none;
@@ -3730,18 +3741,19 @@ var STYLES = `
     opacity: 0.8;
     cursor: pointer;
 }
-.undertone-translation--error:hover,
-.undertone-translation--error:focus-visible {
+.mollu-translation--error:hover,
+.mollu-translation--error:focus-visible {
     opacity: 1;
     text-decoration: underline;
 }
 `;
 
 // src/index.js
-var Undertone = class {
+var Mollu = class {
   constructor(meta) {
     this._meta = meta;
     this._stores = createStores();
+    reclaimInterimData();
     this._settings = new Settings({
       guildName: (id6) => this._stores.guildName(id6),
       channelName: (id6) => this._stores.channelName(id6),
