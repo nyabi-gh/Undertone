@@ -749,6 +749,7 @@ function extend3(body, { model }) {
 // src/translation/providers/claude.js
 var claude_exports = {};
 __export(claude_exports, {
+  cacheVersion: () => cacheVersion,
   defaults: () => defaults4,
   id: () => id4,
   keyHint: () => keyHint4,
@@ -761,8 +762,18 @@ var label4 = "Anthropic Claude";
 var keyHint4 = "sk-ant-...";
 var models4 = Object.freeze(["claude-haiku-5-5", "claude-sonnet-5-5"]);
 var defaults4 = Object.freeze({ model: models4[0], baseUrl: "https://api.anthropic.com" });
+var cacheVersion = 2;
 var API_VERSION = "2023-06-01";
 var FALLBACK_BETA = "server-side-fallback-2026-07-01";
+var ANSWER_FORMAT = Object.freeze({
+  type: "json_schema",
+  schema: {
+    type: "object",
+    properties: { translation: { type: "string" } },
+    required: ["translation"],
+    additionalProperties: false
+  }
+});
 async function translate4({ text, settings, signal }) {
   const apiKey = String(settings.apiKey || "").trim();
   if (!apiKey) throw configError(t("error.noApiKey"));
@@ -772,9 +783,10 @@ async function translate4({ text, settings, signal }) {
     model,
     max_tokens: MAX_OUTPUT_TOKENS,
     system: systemPrompt(getLanguage(settings.targetLanguage).name),
-    messages: [{ role: "user", content: text }]
+    messages: [{ role: "user", content: text }],
+    output_config: { format: ANSWER_FORMAT }
   };
-  if (!/^claude-haiku-4/i.test(model)) body.output_config = { effort: "low" };
+  if (!/^claude-haiku-4/i.test(model)) body.output_config.effort = "low";
   const headers = {
     "x-api-key": apiKey,
     "anthropic-version": API_VERSION,
@@ -786,7 +798,8 @@ async function translate4({ text, settings, signal }) {
   }
   const json = await send2(`${root}/v1/messages`, { headers, signal, body });
   if (json?.stop_reason === "refusal") throw new Error(t("error.refused"));
-  const output = (Array.isArray(json?.content) ? json.content : []).filter((block2) => block2?.type === "text" && typeof block2.text === "string").map((block2) => block2.text).join("").trim();
+  const answer = (Array.isArray(json?.content) ? json.content : []).filter((block2) => block2?.type === "text" && typeof block2.text === "string").map((block2) => block2.text).join("");
+  const output = translationIn(answer);
   if (!output) {
     logger.warn(
       `${model} gave no answer (stop_reason ${json?.stop_reason ?? "none"}, usage ${JSON.stringify(json?.usage ?? null)})`
@@ -797,17 +810,25 @@ async function translate4({ text, settings, signal }) {
   }
   return output;
 }
+function translationIn(answer) {
+  try {
+    const translation = JSON.parse(answer)?.translation;
+    return typeof translation === "string" ? translation.trim() : "";
+  } catch {
+    return "";
+  }
+}
 async function send2(url, { headers, signal, body }) {
   try {
     return await postJson(url, { headers, signal, body });
   } catch (err) {
-    if (!(err?.status === 400 && body.output_config && /effort|output_config/i.test(String(err.body || "")))) {
+    if (!(err?.status === 400 && body.output_config?.effort && /effort/i.test(String(err.body || "")))) {
       throw err;
     }
     logger.warn(`${body.model} rejected the effort setting; asking again without it`);
-    const retry = { ...body };
-    delete retry.output_config;
-    return postJson(url, { headers, signal, body: retry });
+    const outputConfig = { ...body.output_config };
+    delete outputConfig.effort;
+    return postJson(url, { headers, signal, body: { ...body, output_config: outputConfig } });
   }
 }
 
@@ -1970,11 +1991,13 @@ var Translator = class {
   forget(text) {
     this._cache.delete(this._cacheKey(mask(text).masked, this._settings.current.targetLanguage));
   }
-  // A translation belongs to the model that produced it.
+  // A translation belongs to the model that produced it, and to the way it was asked for.
   _cacheKey(masked, language) {
     const { provider, model } = this._settings.current;
-    const engine = model || getProvider(provider).defaults.model;
-    return `${provider}${engine}${language}${masked}`;
+    const backend = getProvider(provider);
+    const engine = model || backend.defaults.model;
+    const source = backend.cacheVersion ? `${provider}.${backend.cacheVersion}` : provider;
+    return `${source}${engine}${language}${masked}`;
   }
   remember(text, translation, language) {
     if (mask(text).tokens.length || mask(translation).tokens.length) return;

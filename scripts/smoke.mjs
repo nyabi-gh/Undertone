@@ -2061,7 +2061,7 @@ await checkAsync("openai: GPT-6 is asked with reasoning at its least and no temp
 await checkAsync("claude: a Messages API request, answered by its text blocks", async () => {
     const previous = BdApi.Net.fetch;
     let seen = null;
-    let reply = { stop_reason: "end_turn", content: [{ type: "text", text: "안녕" }] };
+    let reply = claudeAnswer("안녕");
     BdApi.Net.fetch = async (url, options) => {
         seen = { url, headers: options.headers, body: JSON.parse(options.body) };
         return new Response(JSON.stringify(reply), { status: 200 });
@@ -2076,25 +2076,24 @@ await checkAsync("claude: a Messages API request, answered by its text blocks", 
         assert.equal(seen.body.model, "claude-haiku-4-5");
         assert.equal(typeof seen.body.system, "string");
         assert.deepEqual(seen.body.messages, [{ role: "user", content: "hello there" }]);
-        assert.ok(!("output_config" in seen.body), "Haiku 4.5 has no effort control");
+        assert.equal(seen.body.output_config.format.type, "json_schema", "the answer is one JSON field");
+        assert.ok(!("effort" in seen.body.output_config), "Haiku 4.5 has no effort control");
         assert.ok(!("temperature" in seen.body));
         assert.ok(!("fallbacks" in seen.body));
 
         settings.current.model = "claude-haiku-5-5";
         await new Translator({ settings }).translate("hello again");
-        assert.deepEqual(seen.body.output_config, { effort: "low" }, "Haiku 5.5 takes effort");
+        assert.equal(seen.body.output_config.effort, "low", "Haiku 5.5 takes effort");
+        assert.equal(seen.body.output_config.format.type, "json_schema");
         assert.ok(!("fallbacks" in seen.body), "Haiku has no server-side fallback");
 
         settings.current.model = "claude-sonnet-5";
         reply = {
             stop_reason: "end_turn",
-            content: [
-                { type: "thinking", thinking: "" },
-                { type: "text", text: "안녕하세요" },
-            ],
+            content: [{ type: "thinking", thinking: "" }, ...claudeAnswer("안녕하세요").content],
         };
         assert.equal((await new Translator({ settings }).translate("hi there")).text, "안녕하세요");
-        assert.deepEqual(seen.body.output_config, { effort: "low" });
+        assert.equal(seen.body.output_config.effort, "low");
 
         settings.current.model = "claude-sonnet-5-5";
         await new Translator({ settings }).translate("good morning");
@@ -2108,6 +2107,74 @@ await checkAsync("claude: a Messages API request, answered by its text blocks", 
     } finally {
         BdApi.Net.fetch = previous;
     }
+});
+
+await checkAsync("claude: only the translation field is shown, and a cut-off answer is not", async () => {
+    const previous = BdApi.Net.fetch;
+    let reply = claudeAnswer("내일 봐");
+    BdApi.Net.fetch = async () => new Response(JSON.stringify(reply), { status: 200 });
+    try {
+        const settings = providerSettings("claude", "claude-haiku-5-5", "https://api.anthropic.com");
+        assert.equal((await new Translator({ settings }).translate("see you tomorrow")).text, "내일 봐");
+
+        reply = {
+            stop_reason: "max_tokens",
+            content: [{ type: "text", text: '{"translation": "내일 ' }],
+        };
+        const cut = await new Translator({ settings }).translate("see you tomorrow");
+        assert.equal(cut.status, "error", "half a JSON answer is never put on screen");
+        assert.equal(cut.message, t("error.reasoningOnly"));
+    } finally {
+        BdApi.Net.fetch = previous;
+    }
+});
+
+await checkAsync("claude: a model that refuses effort is asked again, still for JSON", async () => {
+    const previous = BdApi.Net.fetch;
+    const bodies = [];
+    BdApi.Net.fetch = async (_url, options) => {
+        const body = JSON.parse(options.body);
+        bodies.push(body);
+        if (body.output_config.effort) {
+            return new Response(
+                JSON.stringify({
+                    type: "error",
+                    error: {
+                        type: "invalid_request_error",
+                        message: "This model does not support the effort parameter.",
+                    },
+                }),
+                { status: 400 },
+            );
+        }
+        return new Response(JSON.stringify(claudeAnswer("안녕")), { status: 200 });
+    };
+    try {
+        const settings = providerSettings("claude", "claude-opus-4-1", "https://api.anthropic.com");
+        assert.equal((await new Translator({ settings }).translate("hello there")).text, "안녕");
+        assert.equal(bodies.length, 2);
+        assert.ok(!("effort" in bodies[1].output_config));
+        assert.equal(bodies[1].output_config.format.type, "json_schema");
+    } finally {
+        BdApi.Net.fetch = previous;
+    }
+});
+
+check("cache: a Claude answer saved before the answer format is not served again", () => {
+    const settings = providerSettings("claude", "claude-haiku-5-5", "https://api.anthropic.com");
+    const translator = new Translator({ settings });
+    translator._cache.set("claude\u0001claude-haiku-5-5\u0001ko\u0001hello there", null);
+    translator._cache.set(
+        "claude\u0001claude-haiku-5-5\u0001ko\u0001good night",
+        "good night\n\nTranslation: 잘 자",
+    );
+    assert.equal(translator.peek("hello there").status, "unknown", "a verdict from the free-text answer");
+    assert.equal(translator.peek("good night").status, "unknown", "a translation from the free-text answer");
+
+    settings.current.provider = "deepseek";
+    settings.current.model = "deepseek-flash";
+    translator._cache.set("deepseek\u0001deepseek-flash\u0001ko\u0001hello there", "안녕");
+    assert.equal(translator.peek("hello there").text, "안녕", "other backends keep what they saved");
 });
 
 await checkAsync("claude: an empty balance stops translation like a refused key", async () => {
@@ -2723,6 +2790,10 @@ function stubSettings() {
             maxConcurrent: 2,
         },
     };
+}
+
+function claudeAnswer(translation) {
+    return { stop_reason: "end_turn", content: [{ type: "text", text: JSON.stringify({ translation }) }] };
 }
 
 function unsupported(kind, param) {

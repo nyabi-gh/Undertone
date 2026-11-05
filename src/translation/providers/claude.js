@@ -11,8 +11,25 @@ export const keyHint = "sk-ant-...";
 export const models = Object.freeze(["claude-haiku-5-5", "claude-sonnet-5-5"]);
 export const defaults = Object.freeze({ model: models[0], baseUrl: "https://api.anthropic.com" });
 
+// Answers from before ANSWER_FORMAT often carried the source and the model's second thoughts,
+// so the cache must not serve them again.
+export const cacheVersion = 2;
+
 const API_VERSION = "2023-06-01";
 const FALLBACK_BETA = "server-side-fallback-2026-07-01";
+
+// Answering in free text, Haiku 5.5 wrote the source back -- alone, or ahead of a "Translation:"
+// label and its own second thoughts -- for about half of plain English messages. One JSON field
+// leaves room for nothing but the translation.
+const ANSWER_FORMAT = Object.freeze({
+    type: "json_schema",
+    schema: {
+        type: "object",
+        properties: { translation: { type: "string" } },
+        required: ["translation"],
+        additionalProperties: false,
+    },
+});
 
 export async function translate({ text, settings, signal }) {
     const apiKey = String(settings.apiKey || "").trim();
@@ -27,10 +44,11 @@ export async function translate({ text, settings, signal }) {
         max_tokens: MAX_OUTPUT_TOKENS,
         system: systemPrompt(getLanguage(settings.targetLanguage).name),
         messages: [{ role: "user", content: text }],
+        output_config: { format: ANSWER_FORMAT },
     };
     // The newer models think by default and take no temperature; low effort keeps a
     // translation from turning into a deliberation. Haiku 4.5 has no effort control at all.
-    if (!/^claude-haiku-4/i.test(model)) body.output_config = { effort: "low" };
+    if (!/^claude-haiku-4/i.test(model)) body.output_config.effort = "low";
 
     const headers = {
         "x-api-key": apiKey,
@@ -47,11 +65,11 @@ export async function translate({ text, settings, signal }) {
     const json = await send(`${root}/v1/messages`, { headers, signal, body });
 
     if (json?.stop_reason === "refusal") throw new Error(t("error.refused"));
-    const output = (Array.isArray(json?.content) ? json.content : [])
+    const answer = (Array.isArray(json?.content) ? json.content : [])
         .filter((block) => block?.type === "text" && typeof block.text === "string")
         .map((block) => block.text)
-        .join("")
-        .trim();
+        .join("");
+    const output = translationIn(answer);
     if (!output) {
         logger.warn(
             `${model} gave no answer (stop_reason ${json?.stop_reason ?? "none"}, ` +
@@ -64,21 +82,28 @@ export async function translate({ text, settings, signal }) {
     return output;
 }
 
-// An older model typed in by hand can refuse the effort setting; ask again without it.
+// A JSON answer cut off by max_tokens no longer parses; it counts as no answer.
+function translationIn(answer) {
+    try {
+        const translation = JSON.parse(answer)?.translation;
+        return typeof translation === "string" ? translation.trim() : "";
+    } catch {
+        return "";
+    }
+}
+
+// An older model typed in by hand can refuse the effort setting; ask again without it. The
+// answer format stays, since the reply is read as JSON either way.
 async function send(url, { headers, signal, body }) {
     try {
         return await postJson(url, { headers, signal, body });
     } catch (err) {
-        if (!(
-            err?.status === 400 &&
-            body.output_config &&
-            /effort|output_config/i.test(String(err.body || ""))
-        )) {
+        if (!(err?.status === 400 && body.output_config?.effort && /effort/i.test(String(err.body || "")))) {
             throw err;
         }
         logger.warn(`${body.model} rejected the effort setting; asking again without it`);
-        const retry = { ...body };
-        delete retry.output_config;
-        return postJson(url, { headers, signal, body: retry });
+        const outputConfig = { ...body.output_config };
+        delete outputConfig.effort;
+        return postJson(url, { headers, signal, body: { ...body, output_config: outputConfig } });
     }
 }

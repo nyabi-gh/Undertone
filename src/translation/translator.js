@@ -105,11 +105,13 @@ export class Translator {
         this._cache.delete(this._cacheKey(mask(text).masked, this._settings.current.targetLanguage));
     }
 
-    // A translation belongs to the model that produced it.
+    // A translation belongs to the model that produced it, and to the way it was asked for.
     _cacheKey(masked, language) {
         const { provider, model } = this._settings.current;
-        const engine = model || getProvider(provider).defaults.model;
-        return `${provider}\u0001${engine}\u0001${language}\u0001${masked}`;
+        const backend = getProvider(provider);
+        const engine = model || backend.defaults.model;
+        const source = backend.cacheVersion ? `${provider}.${backend.cacheVersion}` : provider;
+        return `${source}\u0001${engine}\u0001${language}\u0001${masked}`;
     }
 
     remember(text, translation, language) {
